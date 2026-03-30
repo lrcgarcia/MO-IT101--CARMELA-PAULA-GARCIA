@@ -101,10 +101,10 @@ public class MotorPHPayroll {
         System.out.println("              MOTORPH PAYROLL SYSTEM");
         System.out.println("=================================================");
 
-        double totalGross = 0;
+        double totalGrossIncome = 0;
         double totalBenefits = 0;
         double totalDeductions = 0;
-        double totalNet = 0;
+        double totalNetPay = 0;
 
         for (Employee employee : employees.values()) {
             double hoursWorked = timecards.getOrDefault(employee.employeeNumber, 0.0);
@@ -116,39 +116,13 @@ public class MotorPHPayroll {
             PayrollResult result = computePayroll(employee, hoursWorked);
             printPayslip(result);
 
-            totalGross += result.grossPay;
+            totalGrossIncome += result.grossPay;
             totalBenefits += result.totalBenefits;
             totalDeductions += result.totalDeductions;
-            totalNet += result.netPay;
+            totalNetPay += result.netPay;
         }
 
-        System.out.println("\n================ PAYROLL SUMMARY REPORT ================");
-        System.out.printf("%-8s %-22s %-22s %-12s %-12s%n",
-                "Emp ID", "Employee Name", "Position", "Gross Pay", "Net Pay");
-
-        for (Employee employee : employees.values()) {
-            double hoursWorked = timecards.getOrDefault(employee.employeeNumber, 0.0);
-
-            if (hoursWorked <= 0) {
-                continue;
-            }
-
-            PayrollResult result = computePayroll(employee, hoursWorked);
-
-            System.out.printf("%-8s %-22s %-22s %-12.2f %-12.2f%n",
-                    employee.employeeNumber,
-                    shorten(employee.getFullName(), 22),
-                    shorten(employee.position, 22),
-                    result.grossPay,
-                    result.netPay);
-        }
-
-        System.out.println("--------------------------------------------------------");
-        System.out.printf("TOTAL GROSS PAY   : Php %.2f%n", totalGross);
-        System.out.printf("TOTAL BENEFITS    : Php %.2f%n", totalBenefits);
-        System.out.printf("TOTAL DEDUCTIONS  : Php %.2f%n", totalDeductions);
-        System.out.printf("TOTAL NET PAY     : Php %.2f%n", totalNet);
-        System.out.println("========================================================");
+        printPayrollSummary(employees, timecards, totalGrossIncome, totalBenefits, totalDeductions, totalNetPay);
     }
 
     private static PayrollResult computePayroll(Employee employee, double hoursWorked) {
@@ -220,6 +194,39 @@ public class MotorPHPayroll {
         System.out.println("\n------------------- SUMMARY ---------------------");
         System.out.printf("Net Pay         : Php %.2f%n", result.netPay);
         System.out.println("=================================================");
+    }
+
+    private static void printPayrollSummary(Map<String, Employee> employees, Map<String, Double> timecards,
+                                            double totalGrossIncome, double totalBenefits,
+                                            double totalDeductions, double totalNetPay) {
+
+        System.out.println("\n================ PAYROLL SUMMARY REPORT ================");
+        System.out.printf("%-8s %-22s %-22s %-12s %-12s%n",
+                "Emp ID", "Employee Name", "Position", "Gross Pay", "Net Pay");
+
+        for (Employee employee : employees.values()) {
+            double hoursWorked = timecards.getOrDefault(employee.employeeNumber, 0.0);
+
+            if (hoursWorked <= 0) {
+                continue;
+            }
+
+            PayrollResult result = computePayroll(employee, hoursWorked);
+
+            System.out.printf("%-8s %-22s %-22s %-12.2f %-12.2f%n",
+                    employee.employeeNumber,
+                    shorten(employee.getFullName(), 22),
+                    shorten(employee.position, 22),
+                    result.grossPay,
+                    result.netPay);
+        }
+
+        System.out.println("--------------------------------------------------------");
+        System.out.printf("TOTAL GROSS PAY   : Php %.2f%n", totalGrossIncome);
+        System.out.printf("TOTAL BENEFITS    : Php %.2f%n", totalBenefits);
+        System.out.printf("TOTAL DEDUCTIONS  : Php %.2f%n", totalDeductions);
+        System.out.printf("TOTAL NET PAY     : Php %.2f%n", totalNetPay);
+        System.out.println("========================================================");
     }
 
     private static Map<String, Employee> readEmployees(String filename) {
@@ -341,13 +348,13 @@ public class MotorPHPayroll {
     private static String getDepartmentGroup(String position) {
         String lower = position.toLowerCase();
 
-        if (lower.contains("finance") || lower.contains("account")) {
+        if (lower.contains("finance") || lower.contains("account") || lower.contains("payroll")) {
             return "Accounting";
         } else if (lower.contains("it")) {
             return "IT";
         } else if (lower.contains("customer")) {
             return "Customer Service";
-        } else if (lower.contains("marketing")) {
+        } else if (lower.contains("marketing") || lower.contains("sales")) {
             return "Marketing";
         } else if (lower.contains("human resource") || lower.contains("hr")) {
             return "HR";
@@ -419,17 +426,12 @@ public class MotorPHPayroll {
     }
 
     private static double computePagIbig(double grossPay) {
-        double contribution;
-
         if (grossPay >= 1000 && grossPay <= 1500) {
-            contribution = grossPay * 0.01;
+            return grossPay * 0.01;
         } else if (grossPay > 1500) {
-            contribution = grossPay * 0.02;
-        } else {
-            contribution = 0;
+            return Math.min(grossPay * 0.02, 100.0);
         }
-
-        return contribution;
+        return 0.0;
     }
 
     private static double computeWithholdingTax(double taxableIncome) {
